@@ -1,0 +1,21 @@
+name: Mathlib bump
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # mathlib-update-action runs its own actions/checkout internally;
+      # a preceding actions/checkout step here causes the "Duplicate
+      # header: Authorization" failure documented in runbook
+      # discovery D.2 (2026-05-14).
+      - uses: leanprover-community/mathlib-update-action@d2b8804850b44ce9be89ab9c39ad460e11e563eb  # main @ 2025-11-11
+        with:
+          intermediate_releases: latest

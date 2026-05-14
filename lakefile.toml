@@ -1,0 +1,43 @@
+name = "geb-mathlib"
+defaultTargets = ["Geb"]
+testDriver = "GebTests"
+lintDriver = "batteries/runLinter"
+
+[leanOptions]
+pp.unicode.fun = true
+autoImplicit = false
+relaxedAutoImplicit = false
+maxSynthPendingDepth = 3
+weak.linter.mathlibStandardSet = true
+weak.linter.flexible = true
+weak.linter.style.header = true
+weak.warningAsError = true
+
+[[require]]
+name = "cslib"
+scope = "leanprover"
+rev = "v4.30.0-rc2"
+
+# Pinned in lockstep with `lean-toolchain`; bump `rev` when bumping
+# the toolchain version.
+[[require]]
+name = "doc-gen4"
+git = "https://github.com/leanprover/doc-gen4.git"
+rev = "v4.30.0-rc2"
+
+# Declared last so mathlib's transitive dependency pins
+# (plausible, importGraph) take precedence over other requires';
+# reverse order makes lake's mathlib cache fetcher compute
+# mismatched hashes against the warm cache. Mathlib's README
+# documents this ordering rule for downstream projects.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+
+[[lean_lib]]
+name = "Geb"
+globs = ["Geb.*"]
+
+[[lean_lib]]
+name = "GebTests"
+globs = ["GebTests.*"]

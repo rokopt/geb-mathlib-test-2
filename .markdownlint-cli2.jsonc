@@ -1,0 +1,20 @@
+// Shared markdownlint configuration for geb-mathlib.
+// Picked up by both `markdownlint-cli2` (CLI / CI) and the VSCode
+// markdownlint extension when the workspace is opened at this dir.
+{
+  "config": {
+    "default": true,
+    "MD013": {
+      "tables": false,
+      "code_blocks": false
+    }
+  },
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    ".lake/**",
+    ".jj/**",
+    "node_modules/**"
+  ]
+}

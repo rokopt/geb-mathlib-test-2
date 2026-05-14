@@ -1,0 +1,53 @@
+name: Conflict-check
+
+on:
+  pull_request:
+  push:
+    branches: [main, integration]
+
+jobs:
+  conflict-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Reject .jjconflict-* paths (no allowlist)
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.jjconflict-(base|side)-' ; then
+            echo "::error::Repository contains jj-export conflict directories." >&2
+            echo "        Resolve the conflict locally before pushing." >&2
+            exit 1
+          fi
+          echo "PASS: no .jjconflict-* paths"
+
+      - name: Reject git three-way merge markers (with docs/ sentinel allowlist)
+        run: |
+          set -euo pipefail
+          # Marker enumeration matches spec § "conflict-check.yml":
+          # git's three-way markers <<<<<<< / ======= / >>>>>>> at
+          # column 0 of any line in committed content. (jj's
+          # working-copy markers — %%%%%%% diff from:, +++++++,
+          # \\\\\\\, etc. — do NOT appear in a jj-exported
+          # conflict's committed git tree; the path-based check
+          # above is the binding gate for jj-originated conflicts.
+          # Verified against jj 0.41.0, 2026-05-07.)
+          fail=0
+          while IFS= read -r f; do
+            # Sentinel allowlist applies only to docs/-scoped files.
+            case "$f" in
+              docs/*)
+                if head -n 30 "$f" | grep -qF '<!-- conflict-check: allow markers in this file -->' ; then
+                  continue
+                fi
+                ;;
+            esac
+            if grep -lE '^(<<<<<<<|=======|>>>>>>>)' "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::contains git conflict marker at column 0" >&2
+              fail=1
+            fi
+          done < <(git ls-files)
+          [ "$fail" -eq 0 ] || exit 1
+          echo "PASS: no unguarded conflict markers in committed content"

@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, integration]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/integration' }}
+
+jobs:
+  style_lint:
+    name: Style lint (forbid bare umbrella imports)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: forbid bare umbrella imports under upstream-eligible subtrees
+        run: |
+          if grep -RHnE '^import (Mathlib|Cslib)$' \
+               Geb/Mathlib Geb/Cslib GebTests/Mathlib GebTests/Cslib 2>/dev/null; then
+            echo "FAIL: bare umbrella 'import Mathlib' or 'import Cslib' in upstream-eligible files" >&2
+            exit 1
+          fi
+
+  floodgate_imports:
+    name: Floodgate imports lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: scripts/lint-imports.sh
+        run: bash scripts/lint-imports.sh
+
+  build:
+    name: Build / test / lint / shake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9  # v1
+        with:
+          build: true
+          test: true
+          lint: true
+          mk_all-check: false
+      # `lake shake` requires built oleans for every library it
+      # scans. `build: true` above honours `defaultTargets` (Geb
+      # only), so build `GebTests` explicitly here.
+      - name: lake build GebTests (prerequisite for lake shake)
+        run: lake build GebTests
+      - name: lake shake (minimised imports)
+        run: lake shake --add-public --keep-implied --keep-prefix Geb GebTests
+      - name: scripts/tests/test-lake-shake.sh
+        run: bash scripts/tests/test-lake-shake.sh
+
+  hooks_test:
+    name: Hooks smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: install jq
+        run: sudo apt-get install -y jq
+      - name: scripts/hooks/tests/test-block-mutating-git.sh
+        run: bash scripts/hooks/tests/test-block-mutating-git.sh
+
+  axiom_check:
+    name: Axiom check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9  # v1
+        with:
+          build: true
+          test: false
+          lint: false
+          mk_all-check: false
+      - name: scripts/check-axioms.sh
+        run: bash scripts/check-axioms.sh Geb/ GebTests/

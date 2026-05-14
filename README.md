@@ -1,5 +1,10 @@
 # geb-mathlib
 
+> **Disclaimer**: this is `rokopt/geb-mathlib-test-2`, a
+> throwaway test repository for the geb-mathlib bootstrap,
+> iteration 2. It is NOT the real `rokopt/geb-mathlib` repo.
+> Ignore.
+
 A Lean 4 + mathlib formalisation of Geb, a categorical programming
 language whose first-class notions include "programming language"
 itself. The repository develops mathematical content in a style
